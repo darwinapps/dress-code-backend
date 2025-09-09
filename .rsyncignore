@@ -1,0 +1,11 @@
+/.circleci
+/.git
+.vscode
+/.npm
+/wp-config.php
+/.htaccess
+/sitemap.xml
+/sitemap.xml.gz
+node_modules
+/.output
+/.nuxt

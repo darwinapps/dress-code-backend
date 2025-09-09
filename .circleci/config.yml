@@ -1,0 +1,123 @@
+version: 2.1
+
+commands:
+  setup_ssh_config:
+    description: "Настройка SSH конфигурации"
+    steps:
+      - run:
+          name: Setting up SSH directory
+          command: |
+            mkdir -p ~/.ssh
+            chmod 700 ~/.ssh
+      - run:
+          name: Adding known hosts for JUMP server
+          command: |
+            ssh-keyscan -p $JUMP_SERVER_PORT -H $JUMP_SERVER_HOSTNAME >> ~/.ssh/known_hosts
+            chmod 644 ~/.ssh/known_hosts
+      - run:
+          name: Configuring SSH
+          command: |
+            echo "Host bastion
+              HostName $JUMP_SERVER_HOSTNAME
+              User $JUMP_SERVER_USER
+              Port $JUMP_SERVER_PORT
+            " >> ~/.ssh/config
+
+            echo "Host target-server
+              HostName $HOST_DEPLOY
+              User $USER_DEPLOY
+              ProxyJump bastion
+            " >> ~/.ssh/config
+
+            chmod 600 ~/.ssh/config
+            cat ~/.ssh/config
+      - run:
+          name: First connection to target server to add host key
+          command: |
+            ssh -o StrictHostKeyChecking=no target-server "echo 'SSH connection successful!'"
+
+jobs:
+  deploy-to-stage:
+
+    docker:
+      - image: cimg/base:current
+
+    working_directory: ~/repo
+
+    steps:
+      - checkout
+
+      - run:
+          name: Setup Environment Variables
+          command: |
+            echo "export HOST_DEPLOY=dresscode2.darwinapps.com" >> $BASH_ENV
+            echo "export USER_DEPLOY=dresscode2" >> $BASH_ENV
+            echo "export WEBROOT_PATH=/home/dresscode2/webroot/backend" >> $BASH_ENV
+
+      - setup_ssh_config
+
+      - run:
+          name: Installation of additional packages
+          command: |
+            sudo apt-get update
+            sudo apt-get install rsync -y
+
+      - run:
+          name: Deploy to the Environment
+          command: |
+            rsync -e "ssh -F $HOME/.ssh/config" \
+              --delete \
+              --exclude-from='./.rsyncignore' \
+              -av . target-server:$WEBROOT_PATH/
+
+      - run:
+          command: echo "export onBUILD=0" >> $BASH_ENV
+          when: on_success
+
+      - run:
+          command: echo "export onBUILD=1" >> $BASH_ENV
+          when: on_fail
+
+      - run:
+          name: Send message to Committer
+          command: |
+            Commitstr=$(git log -1 --pretty=format:"%s")
+            Committer=$(git log -1 --pretty=format:"%ce")
+            Commithash=$(git log -1 --pretty=format:"%h")
+
+
+            t1=$(date +"%H:%M:%S")
+            t2=$(git log -1 --pretty=format:"%cd" --date=rfc2822)
+            t2=$(date -u -d "$t2" +"%H:%M:%S")
+            t3=$(date -u -d "0 $(date -u -d "$t1" +"%s") sec - $(date -u -d "$t2" +"%s") sec" +"%H:%M:%S")
+
+            Subjectstr='SUCCESS! Commit '$Commithash' ('$Commitstr') was built successfully ('$t3')!'
+            Messagestr='The build on the branch '$CIRCLE_BRANCH' in the project '$CIRCLE_PROJECT_USERNAME'/'$CIRCLE_PROJECT_REPONAME' on CircleCI completed successfully!'
+
+            if [ $onBUILD -eq 1 ]; then
+              Subjectstr='FAILED! Commit '$Commithash' ('$Commitstr') was built unsuccessfully ('$t3')!'
+              Messagestr=$(printf "%s\r\n%s\n" "The build on the branch $CIRCLE_BRANCH in the project $CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME on CircleCI failed!"\
+                                               "Please contact the devops engineer at DarwinApps.")
+            fi
+
+            curl -s --user 'api:'$MAILGUN_APIKEY\
+              https://api.mailgun.net/v3/$MAILGUN_DOMAIN/messages\
+              -F from='CircleCI <'$MAILGUN_FROM'>'\
+              -F to=$Committer\
+              -F subject="""$Subjectstr"""\
+              -F text="""$Messagestr"""
+          when: always
+
+
+
+workflows:
+  main:
+    jobs:
+      - deploy-to-stage:
+          filters:
+            branches:
+              only:
+                - master
+          context: 
+            - mailgun-credentials
+            - jump-server-config

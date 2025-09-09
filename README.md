@@ -1,3 +1,5 @@
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/darwinapps/dress-code-backend/tree/master.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/darwinapps/dress-code-backend/tree/master)
+
 # fuxt-backend
 
 A low-code/no-code theme that turns WordPress into a true GraphQL powered Headless CMS. Optimized for the [fuxt frontend boilerplate](https://github.com/funkhaus/fuxt).

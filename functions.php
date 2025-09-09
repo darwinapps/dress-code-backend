@@ -21,3 +21,4 @@ require_once get_template_directory() . '/functions/developer-role.php';
 require_once get_template_directory() . '/functions/widgets.php';
 require_once get_template_directory() . '/functions/svg.php';
 require_once get_template_directory() . '/functions/proxy.php';
+require_once get_template_directory() . '/functions/deploy.php';

@@ -22,3 +22,4 @@ require_once get_template_directory() . '/functions/widgets.php';
 require_once get_template_directory() . '/functions/svg.php';
 require_once get_template_directory() . '/functions/proxy.php';
 require_once get_template_directory() . '/functions/deploy.php';
+require_once get_template_directory() . '/functions/svg-support.php';

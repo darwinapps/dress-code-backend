@@ -89,27 +89,6 @@
                     "parent_repeater": "field_675af3a6eb2d6"
                 }
             ]
-        },
-        {
-            "key": "field_68e6760238de2",
-            "label": "Author Name",
-            "name": "author_name",
-            "aria-label": "",
-            "type": "text",
-            "instructions": "",
-            "required": 0,
-            "conditional_logic": 0,
-            "wrapper": {
-                "width": "",
-                "class": "",
-                "id": ""
-            },
-            "default_value": "",
-            "maxlength": "",
-            "allow_in_bindings": 0,
-            "placeholder": "",
-            "prepend": "",
-            "append": ""
         }
     ],
     "location": [
@@ -156,5 +135,5 @@
     "active": true,
     "description": "",
     "show_in_rest": 0,
-    "modified": 1759933968
+    "modified": 1759934743
 }

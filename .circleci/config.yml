@@ -50,9 +50,28 @@ jobs:
       - run:
           name: Setup Environment Variables
           command: |
-            echo "export HOST_DEPLOY=dresscode2.darwinapps.com" >> $BASH_ENV
-            echo "export USER_DEPLOY=dresscode2" >> $BASH_ENV
-            echo "export WEBROOT_PATH=/home/dresscode2/webroot/backend" >> $BASH_ENV
+            echo "export HOST_DEPLOY_PROD=3.224.47.73" >> $BASH_ENV
+            echo "export USER_DEPLOY_PROD=ubuntu" >> $BASH_ENV
+            echo "export WEBROOT_PATH_PROD=/var/www/dresscodeny.prod/backend/wp-content/themes/dresscode2" >> $BASH_ENV
+
+            echo "export HOST_DEPLOY_STAGE=dresscode2.darwinapps.com" >> $BASH_ENV
+            echo "export USER_DEPLOY_STAGE=dresscode2" >> $BASH_ENV
+            echo "export WEBROOT_PATH_STAGE=/home/dresscode2/webroot/backend" >> $BASH_ENV
+
+      - run:
+          name: Setup Environment Variables depending on the branch
+          command: |
+            if [ "${CIRCLE_BRANCH}" == "master" ]; then
+              echo "export HOST_DEPLOY=\"${HOST_DEPLOY_PROD}\"" >> $BASH_ENV
+              echo "export USER_DEPLOY=\"${USER_DEPLOY_PROD}\"" >> $BASH_ENV
+              echo "export WEBROOT_PATH=\"${WEBROOT_PATH_PROD}\"" >> $BASH_ENV
+            fi
+
+            if [ "${CIRCLE_BRANCH}" == "stage" ]; then
+              echo "export HOST_DEPLOY=\"${HOST_DEPLOY_STAGE}\"" >> $BASH_ENV
+              echo "export USER_DEPLOY=\"${USER_DEPLOY_STAGE}\"" >> $BASH_ENV
+              echo "export WEBROOT_PATH=\"${WEBROOT_PATH_STAGE}\"" >> $BASH_ENV
+            fi
 
       - setup_ssh_config
 
@@ -65,10 +84,20 @@ jobs:
       - run:
           name: Deploy to the Environment
           command: |
-            rsync -e "ssh -F $HOME/.ssh/config" \
-              --delete \
-              --exclude-from='./.rsyncignore' \
-              -av . target-server:$WEBROOT_PATH/
+            if [ "${CIRCLE_BRANCH}" == "master" ]; then
+              rsync -e "ssh -F $HOME/.ssh/config" \
+                --delete \
+                --exclude-from='./.rsyncignore' \
+                --rsync-path='sudo -u www-data rsync' \
+                -av . target-server:$WEBROOT_PATH/
+            fi
+
+            if [ "${CIRCLE_BRANCH}" == "stage" ]; then
+              rsync -e "ssh -F $HOME/.ssh/config" \
+                --delete \
+                --exclude-from='./.rsyncignore' \
+                -av . target-server:$WEBROOT_PATH/
+            fi
 
       - run:
           command: echo "export onBUILD=0" >> $BASH_ENV
@@ -118,6 +147,7 @@ workflows:
             branches:
               only:
                 - master
-          context: 
+                - stage
+          context:
             - mailgun-credentials
             - jump-server-config
